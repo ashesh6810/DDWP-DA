@@ -8,4 +8,7 @@ Key points:
 4. U-STN1 + SPEnKF with virtual observations from U-STN12 is given in EnKF_DD_all_time_2DAv2.py
 5. weights and biases for U-STN12 and U-STN1 is provided in the repository. 
 6. Change value of "lead" and run training for any "x" in U-STNx or U-NETx
-7. Baseline U-NET model can be trained (and tested autoregressively) with 
+7. Baseline U-NET model can be trained (and tested autoregressively) with Unet_noSTN.py
+
+Finally, the SPEnKF algorithm implementation is inspire from Tyrus Berry's presentation [here](http://math.gmu.edu/~berry/Presentations/KalmanPractical.pdf)
+For any questions , please reach out to me at akc6@rice.edu
