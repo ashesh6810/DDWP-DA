@@ -1,3 +1,12 @@
+'''
+@author Ashesh Chattopadhyay
+
+SPENKF with hybrid observations. See paper for more details https://gmd.copernicus.org/preprints/gmd-2021-71/
+
+'''
+
+
+
 import numpy as np
 import netCDF4 as nc
 import scipy.io as sio
@@ -5,6 +14,7 @@ file=sio.loadmat('ERA_grid.mat')
 lat=file['lat']
 lon=file['lon']
 
+#### Testing set is year 2018 #####
 fileList_test=[]
 fileList_test.append('geopotential_500hPa_2018_5.625deg.nc')
 
@@ -12,6 +22,9 @@ file=nc.Dataset('ERA_Z500_1hour.nc')
 Z500=np.asarray(file['input'])
 M=np.mean(Z500.flatten())
 sdev=np.std(Z500.flatten())
+
+
+#### This is the experiment with 0.5\sigma_z. Change noise=1 for the second experiment ####
 noise=0.5
 from matplotlib import pyplot as plt
 F=nc.Dataset(fileList_test[0])
@@ -152,26 +165,24 @@ from keras.layers import Dense
 
 from utils import get_initial_weights
 from layers import BilinearInterpolation
-
-
 def stn(input_shape=(32, 64, 1), sampling_size=(8, 16), num_classes=10):
-    image = Input(shape=input_shape)
-    #locnet = Conv2D(32, (5, 5), padding='same')(image)
-    locnet = CConv2D(32, (5, 5), padding='same')(image)
+    inputs = Input(shape=input_shape)
+    conv1 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(inputs)
+    conv1 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv1)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-    locnet = Activation('relu')(locnet)
-    locnet = MaxPool2D(pool_size=(2, 2))(locnet)
-    #locnet = Conv2D(32, (5, 5), padding='same')(locnet)
-    locnet = CConv2D(32, (5, 5), padding='same')(locnet)
+    conv2 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(pool1)
+    conv2 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv2)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
-    locnet = Activation('relu')(locnet)
-    locnet = MaxPool2D(pool_size=(2, 2))(locnet)
-    #locnet = CConv2D(32, (5, 5), padding='same')(locnet)
+    conv3 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(pool2)
+    conv3 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv3)
 
-    #locnet = Conv2D(20, (5, 5), padding='same')(locnet)
-    #locnet = Activation('relu')(locnet)
-    #locnet = MaxPool2D(pool_size=(2, 2))(locnet)
-    locnet = Flatten()(locnet)
+
+    conv5 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv3)
+    conv5 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv5)
+    
+    locnet = Flatten()(conv5)
     locnet = Dense(500)(locnet)
     locnet = Activation('relu')(locnet)
     locnet = Dense(200)(locnet)
@@ -182,31 +193,28 @@ def stn(input_shape=(32, 64, 1), sampling_size=(8, 16), num_classes=10):
     locnet = Activation('relu')(locnet)
     weights = get_initial_weights(50)
     locnet = Dense(6, weights=weights)(locnet)
-    x = BilinearInterpolation(sampling_size)([image, locnet])
-    #x = Conv2D(32, (3, 3), padding='same')(x)
-    x = CConv2D(32, (5, 5), padding='same')(x)
+    x = BilinearInterpolation(sampling_size)([inputs, locnet])
 
-    x = Activation('relu')(x)
-    x = UpSampling2D (size=(2,2))(x)
-    #x=  Conv2D(32, (3,3), padding='same')(x)
-    x = CConv2D(32, (5, 5), padding='same')(x)
 
-    x = Activation('relu')(x)
-    x = UpSampling2D (size=(2,2))(x)
-    #x = Conv2D(32, (3,3), padding='same')(x)
-    #x = CConv2D(32, (5, 5), padding='same')(x)
+    up6 = keras.layers.Concatenate(axis=-1)([Convolution2D(32, 2, 2,activation='relu', border_mode='same')(UpSampling2D(size=(2, 2))(x)), conv2])
+    conv6 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(up6)
+    conv6 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv6)
 
-    #x = Activation('relu')(x)
-    #x = Conv2D(32, (3,3), padding='same')(x)
-    #x = CConv2D(32, (5, 5), padding='same')(x)
+    up7 = keras.layers.Concatenate(axis=-1)([Convolution2D(32, 2, 2,activation='relu', border_mode='same')(UpSampling2D(size=(2, 2))(conv6)), conv1])
+    conv7 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(up7)
+    conv7 = Convolution2D(32, 5, 5, activation='relu', border_mode='same')(conv7)
 
-    #x = Activation('relu')(x)
-    #x = UpSampling2D (size=(2,2))(x)
-    #x = Conv2D(2, (3,3), padding='same')(x)
-    x = CConv2D(1, (5, 5), padding='same')(x)
 
-    x = Activation('linear')(x)
-    return Model(inputs=image, outputs=x)
+
+    conv10 = Convolution2D(1, 5, 5, activation='linear',border_mode='same')(conv7)
+
+    model = Model(input=inputs, output=conv10)
+
+
+
+    return model
+
+
 
 model = stn()
 model.load_weights('best_weights_lead1.h5')
