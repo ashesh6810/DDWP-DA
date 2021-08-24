@@ -53,12 +53,12 @@ TRUTH=Z
 
 
 ##### Add noise to the truth to mimic observations####
-#### Value 3 is 1*\sigma_Z. See more in paper #####
+#### Value 1 is 1*\sigma_Z. See more in paper #####
 Z_rs = np.reshape(Z,[np.size(Z,0), int(np.size(Z,1)*np.size(Z,2))])
 TRUTH = Z_rs
 Z_rs = (Z_rs-M)/sdev
 TRUTH = (TRUTH-M)/sdev
-noise=3
+noise=1
 for k in range(1,np.size(Z_rs,0)):
  Z_rs[k-1,:]=Z_rs[k-1,:]+np.random.normal(0, noise, 2048)
  
