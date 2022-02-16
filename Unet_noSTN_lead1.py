@@ -115,7 +115,7 @@ for loop in fileList_train:
 
     if (count>0):
 
-        model = stn()
+        model = unet_baseline() 
         model.compile(loss='mse', optimizer='adam')
         model.load_weights('best_weights_lead1.h5')
         hist = model.fit(x_train, y_train,
